@@ -6,54 +6,18 @@
     android:background="@color/background"
     android:keepScreenOn="true">
 
-    <!-- Tablet 10,1" w poziomie: kamera | cena | reklamy -->
+    <!-- Tablet 10,1" w poziomie: cena | kamera | reklamy (kolumny boczne równe, więc kamera jest na środku) -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal"
         android:padding="24dp">
 
-        <!-- Lewo: podgląd z kamery i logo -->
+        <!-- Lewo: cena i promocja -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:orientation="vertical">
-
-            <FrameLayout
-                android:id="@+id/cameraContainer"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:background="@drawable/camera_frame_bg">
-
-                <androidx.camera.view.PreviewView
-                    android:id="@+id/preview"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
-                <pl.sqn.sprawdzarka.ScanFrameView
-                    android:id="@+id/scanFrame"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-            </FrameLayout>
-
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="120dp"
-                android:layout_marginTop="20dp"
-                android:contentDescription="@string/logo_description"
-                android:padding="8dp"
-                android:scaleType="fitCenter"
-                android:src="@drawable/logo_sqn" />
-        </LinearLayout>
-
-        <!-- Środek: cena i promocja -->
-        <LinearLayout
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_marginHorizontal="20dp"
-            android:layout_weight="1.3"
+            android:layout_weight="1.15"
             android:orientation="vertical">
 
             <FrameLayout
@@ -201,11 +165,47 @@
         </LinearLayout>
         </LinearLayout>
 
+        <!-- Środek: podgląd z kamery – dokładnie pod przednim aparatem na dłuższym boku -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_marginHorizontal="20dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <FrameLayout
+                android:id="@+id/cameraContainer"
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:background="@drawable/camera_frame_bg">
+
+                <androidx.camera.view.PreviewView
+                    android:id="@+id/preview"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <pl.sqn.sprawdzarka.ScanFrameView
+                    android:id="@+id/scanFrame"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </FrameLayout>
+
+            <ImageView
+                android:layout_width="match_parent"
+                android:layout_height="120dp"
+                android:layout_marginTop="20dp"
+                android:contentDescription="@string/logo_description"
+                android:padding="8dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/logo_sqn" />
+        </LinearLayout>
+
         <!-- Prawo: rotujące reklamy nowości -->
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="match_parent"
-            android:layout_weight="0.85"
+            android:layout_weight="1.15"
             android:background="@drawable/panel_bg"
             android:elevation="2dp"
             android:orientation="vertical">
