@@ -1,0 +1,10 @@
+<resources>
+    <color name="sqn_blue">#009FE3</color>
+    <color name="sqn_blue_dark">#0072B8</color>
+    <color name="background">#F4F6F8</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="text_primary">#111111</color>
+    <color name="text_secondary">#6B7280</color>
+    <color name="divider">#E3E6EA</color>
+    <color name="camera_bg">#111111</color>
+</resources>

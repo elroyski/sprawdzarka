@@ -1,0 +1,7 @@
+<resources>
+    <style name="Theme.Sprawdzarka" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowBackground">@color/background</item>
+        <item name="colorAccent">@color/sqn_blue</item>
+    </style>
+</resources>
