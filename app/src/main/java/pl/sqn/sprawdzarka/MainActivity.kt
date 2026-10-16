@@ -1,6 +1,7 @@
 package pl.sqn.sprawdzarka
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
@@ -20,7 +21,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -63,7 +63,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adCard: AdSlideshowView
     private lateinit var screensaver: View
     private lateinit var saverSlideshow: AdSlideshowView
-    private lateinit var adsSwitch: SwitchCompat
     private var hintPulse: ObjectAnimator? = null
     private val scanLogger by lazy { ScanLogger(this) }
     private val startScreensaver = Runnable { showScreensaver() }
@@ -103,10 +102,7 @@ class MainActivity : AppCompatActivity() {
         adCard = findViewById(R.id.adCard)
         screensaver = findViewById(R.id.screensaver)
         saverSlideshow = findViewById(R.id.saverSlideshow)
-        adsSwitch = findViewById(R.id.adsSwitch)
-        adsSwitch.setOnCheckedChangeListener { _, checked ->
-            if (checked) showScreensaver() else hideScreensaver()
-        }
+        setupPromoHold(findViewById(R.id.promoBanner))
 
         // Zaokrąglone rogi podglądu – SurfaceView nie respektuje przycięcia, stąd TextureView.
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
@@ -183,6 +179,28 @@ class MainActivity : AppCompatActivity() {
         return if (swallowGesture) true else super.dispatchTouchEvent(ev)
     }
 
+    /** Ukryte wejście w tryb reklam: przytrzymanie paska promocji przez kilka sekund. */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupPromoHold(banner: View) {
+        val trigger = Runnable {
+            banner.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+            showScreensaver()
+        }
+        banner.setOnTouchListener { _, ev ->
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    banner.animate().scaleX(0.97f).scaleY(0.97f).setDuration(PROMO_HOLD_MS).start()
+                    banner.postDelayed(trigger, PROMO_HOLD_MS)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    banner.removeCallbacks(trigger)
+                    banner.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+                }
+            }
+            true
+        }
+    }
+
     private fun restartIdleTimer() {
         screensaver.removeCallbacks(startScreensaver)
         screensaver.postDelayed(startScreensaver, IDLE_TIMEOUT_MS)
@@ -192,7 +210,6 @@ class MainActivity : AppCompatActivity() {
         screensaver.removeCallbacks(startScreensaver)
         if (saverOn) return
         saverOn = true
-        adsSwitch.isChecked = true
         adCard.stop()
         screensaver.alpha = 0f
         screensaver.visibility = View.VISIBLE
@@ -210,7 +227,6 @@ class MainActivity : AppCompatActivity() {
     private fun hideScreensaver() {
         if (!saverOn) return
         saverOn = false
-        adsSwitch.isChecked = false
         saverSlideshow.stop()
         hintPulse?.cancel()
         screensaver.animate().cancel()
@@ -313,5 +329,6 @@ class MainActivity : AppCompatActivity() {
         private const val HIGHLIGHT_TIME_MS = 600L
         private const val SAME_CODE_PAUSE_MS = 3_000L
         private const val IDLE_TIMEOUT_MS = 5 * 60_000L
+        private const val PROMO_HOLD_MS = 3_000L
     }
 }
