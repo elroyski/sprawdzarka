@@ -103,6 +103,7 @@ class MainActivity : AppCompatActivity() {
         screensaver = findViewById(R.id.screensaver)
         saverSlideshow = findViewById(R.id.saverSlideshow)
         setupPromoHold(findViewById(R.id.promoBanner))
+        setupLogoTaps(findViewById(R.id.logo))
 
         // Zaokrąglone rogi podglądu – SurfaceView nie respektuje przycięcia, stąd TextureView.
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
@@ -201,6 +202,32 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** Ukryta aktualizacja cen: 5 szybkich stuknięć w logo. */
+    private fun setupLogoTaps(logo: View) {
+        var taps = 0
+        var lastTapAt = 0L
+        var updating = false
+        logo.setOnClickListener {
+            val now = SystemClock.elapsedRealtime()
+            taps = if (now - lastTapAt < LOGO_TAP_GAP_MS) taps + 1 else 1
+            lastTapAt = now
+            if (taps < LOGO_TAPS || updating) return@setOnClickListener
+            taps = 0
+            updating = true
+            Toast.makeText(this, R.string.prices_updating, Toast.LENGTH_SHORT).show()
+            lifecycleScope.launch {
+                val message = try {
+                    getString(R.string.prices_updated, repository.updatePrices())
+                } catch (e: Exception) {
+                    Log.w(TAG, "Aktualizacja cen nieudana", e)
+                    getString(R.string.prices_failed, e.message ?: e.javaClass.simpleName)
+                }
+                updating = false
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
     private fun restartIdleTimer() {
         screensaver.removeCallbacks(startScreensaver)
         screensaver.postDelayed(startScreensaver, IDLE_TIMEOUT_MS)
@@ -259,7 +286,7 @@ class MainActivity : AppCompatActivity() {
                 nameView.text = product.title
                 nameView.setTextColor(getColor(R.color.text_primary))
                 authorView.text = product.author
-                authorView.visibility = View.VISIBLE
+                authorView.visibility = if (product.author.isEmpty()) View.GONE else View.VISIBLE
                 priceView.text = formatPrice(product.grossPrice)
                 priceView.visibility = View.VISIBLE
                 accentLine.visibility = View.VISIBLE
@@ -330,5 +357,7 @@ class MainActivity : AppCompatActivity() {
         private const val SAME_CODE_PAUSE_MS = 3_000L
         private const val IDLE_TIMEOUT_MS = 5 * 60_000L
         private const val PROMO_HOLD_MS = 3_000L
+        private const val LOGO_TAPS = 5
+        private const val LOGO_TAP_GAP_MS = 600L
     }
 }
