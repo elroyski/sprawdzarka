@@ -215,7 +215,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
                 android:layout_weight="1"
-                app:intervalMs="6000"
+                app:intervalMs="4000"
                 app:pageLayout="@layout/item_ad_card" />
 
             <androidx.appcompat.widget.SwitchCompat
@@ -247,7 +247,7 @@
             android:id="@+id/saverSlideshow"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:intervalMs="8000"
+            app:intervalMs="5500"
             app:pageLayout="@layout/item_ad_saver" />
 
         <ImageView
