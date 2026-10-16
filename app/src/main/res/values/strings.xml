@@ -9,4 +9,8 @@
     <string name="promo_title">3 za 2</string>
     <string name="promo_subtitle">Kup 3 <b>różne</b> produkty\u00A0– najtańszy
 z nich dostajesz gratis!</string>
+    <string name="ads_label">Nowości SQN</string>
+    <string name="saver_label">Nowość</string>
+    <string name="saver_hint">Zeskanuj kod kreskowy, aby sprawdzić cenę</string>
+    <string name="ads_switch">Tryb reklam</string>
 </resources>

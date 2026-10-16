@@ -4,6 +4,8 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.os.Bundle
 import android.os.SystemClock
 import android.text.SpannableString
@@ -11,12 +13,14 @@ import android.text.Spanned
 import android.text.style.RelativeSizeSpan
 import android.util.Log
 import android.util.Size
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewOutlineProvider
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -32,6 +36,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import pl.sqn.sprawdzarka.ads.AdSlideshowView
 import pl.sqn.sprawdzarka.data.AssetPriceRepository
 import pl.sqn.sprawdzarka.data.PriceRepository
 import java.math.BigDecimal
@@ -55,6 +60,16 @@ class MainActivity : AppCompatActivity() {
     private lateinit var idleState: View
     private lateinit var resultState: View
     private lateinit var scanFrame: ScanFrameView
+    private lateinit var adCard: AdSlideshowView
+    private lateinit var screensaver: View
+    private lateinit var saverSlideshow: AdSlideshowView
+    private lateinit var adsSwitch: SwitchCompat
+    private var hintPulse: ObjectAnimator? = null
+    private val scanLogger by lazy { ScanLogger(this) }
+    private val startScreensaver = Runnable { showScreensaver() }
+    /** Dotyk, który zamknął wygaszacz – reszta tego gestu nie trafia do ekranu pod spodem. */
+    private var swallowGesture = false
+    private var saverOn = false
 
     private lateinit var cameraExecutor: ExecutorService
     private lateinit var analyzer: BarcodeAnalyzer
@@ -85,6 +100,13 @@ class MainActivity : AppCompatActivity() {
         idleState = findViewById(R.id.idleState)
         resultState = findViewById(R.id.resultState)
         scanFrame = findViewById(R.id.scanFrame)
+        adCard = findViewById(R.id.adCard)
+        screensaver = findViewById(R.id.screensaver)
+        saverSlideshow = findViewById(R.id.saverSlideshow)
+        adsSwitch = findViewById(R.id.adsSwitch)
+        adsSwitch.setOnCheckedChangeListener { _, checked ->
+            if (checked) showScreensaver() else hideScreensaver()
+        }
 
         // Zaokrąglone rogi podglądu – SurfaceView nie respektuje przycięcia, stąd TextureView.
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
@@ -138,16 +160,81 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    override fun onResume() {
+        super.onResume()
+        adCard.start()
+        if (saverOn) saverSlideshow.start()
+        restartIdleTimer()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        adCard.stop()
+        saverSlideshow.stop()
+        screensaver.removeCallbacks(startScreensaver)
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
+            swallowGesture = saverOn
+            if (swallowGesture) hideScreensaver()
+        }
+        restartIdleTimer()
+        return if (swallowGesture) true else super.dispatchTouchEvent(ev)
+    }
+
+    private fun restartIdleTimer() {
+        screensaver.removeCallbacks(startScreensaver)
+        screensaver.postDelayed(startScreensaver, IDLE_TIMEOUT_MS)
+    }
+
+    private fun showScreensaver() {
+        screensaver.removeCallbacks(startScreensaver)
+        if (saverOn) return
+        saverOn = true
+        adsSwitch.isChecked = true
+        adCard.stop()
+        screensaver.alpha = 0f
+        screensaver.visibility = View.VISIBLE
+        screensaver.animate().cancel()
+        screensaver.animate().alpha(1f).setDuration(600).start()
+        saverSlideshow.start()
+        hintPulse = ObjectAnimator.ofFloat(findViewById(R.id.saverHint), View.ALPHA, 1f, 0.35f).apply {
+            duration = 1600
+            repeatMode = ValueAnimator.REVERSE
+            repeatCount = ValueAnimator.INFINITE
+            start()
+        }
+    }
+
+    private fun hideScreensaver() {
+        if (!saverOn) return
+        saverOn = false
+        adsSwitch.isChecked = false
+        saverSlideshow.stop()
+        hintPulse?.cancel()
+        screensaver.animate().cancel()
+        screensaver.animate().alpha(0f).setDuration(250)
+            .withEndAction { screensaver.visibility = View.GONE }
+            .start()
+        adCard.start()
+        restartIdleTimer()
+    }
+
     private fun onBarcode(code: String) {
         // Ignoruj ten sam kod skanowany ciągle, dopóki leży przed kamerą.
         val now = SystemClock.elapsedRealtime()
         if (code == lastCode && now - lastCodeAt < SAME_CODE_PAUSE_MS) return
         lastCode = code
         lastCodeAt = now
+        // Skan budzi ekran z wygaszacza i od razu pokazuje cenę.
+        hideScreensaver()
+        restartIdleTimer()
 
         resetJob?.cancel()
         resetJob = lifecycleScope.launch {
             val product = repository.findByBarcode(code)
+            launch { scanLogger.log(code, product) }
             // Krótki "pik" po odczycie; inny dźwięk, gdy produktu nie ma w bazie.
             if (product != null) beeper.startTone(ToneGenerator.TONE_PROP_BEEP, 150)
             else beeper.startTone(ToneGenerator.TONE_PROP_NACK, 300)
@@ -225,5 +312,6 @@ class MainActivity : AppCompatActivity() {
         private const val DISPLAY_TIME_MS = 6_000L
         private const val HIGHLIGHT_TIME_MS = 600L
         private const val SAME_CODE_PAUSE_MS = 3_000L
+        private const val IDLE_TIMEOUT_MS = 5 * 60_000L
     }
 }

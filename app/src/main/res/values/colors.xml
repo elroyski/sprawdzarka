@@ -7,4 +7,6 @@
     <color name="text_secondary">#6B7280</color>
     <color name="divider">#E3E6EA</color>
     <color name="camera_bg">#111111</color>
+    <color name="dot_inactive">#33888888</color>
+    <color name="saver_bg">#0B0F14</color>
 </resources>

@@ -1,0 +1,6 @@
+<resources>
+    <declare-styleable name="AdSlideshowView">
+        <attr name="pageLayout" format="reference" />
+        <attr name="intervalMs" format="integer" />
+    </declare-styleable>
+</resources>
