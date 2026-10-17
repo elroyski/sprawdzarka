@@ -118,7 +118,7 @@ class MainActivity : AppCompatActivity() {
         setupPromoHold(findViewById(R.id.promoBanner))
         setupHistoryHold(findViewById(R.id.priceBox))
         setupLogoTaps(findViewById(R.id.logo))
-        // playStartupSound() // wyłączone na razie, niepotrzebne
+        playStartupSound()
 
         // Zaokrąglone rogi podglądu – SurfaceView nie respektuje przycięcia, stąd TextureView.
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE

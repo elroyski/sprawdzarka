@@ -39,7 +39,7 @@
         android:gravity="center"
         android:maxLines="2"
         android:textColor="@color/text_primary"
-        android:textSize="24sp"
+        android:textSize="30sp"
         android:textStyle="bold" />
 
     <TextView
@@ -50,6 +50,6 @@
         android:gravity="center"
         android:maxLines="1"
         android:textColor="@color/text_secondary"
-        android:textSize="17sp" />
+        android:textSize="21sp" />
 
 </LinearLayout>
