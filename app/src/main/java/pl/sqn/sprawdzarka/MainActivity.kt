@@ -4,6 +4,7 @@ import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.media.AudioManager
+import android.media.MediaPlayer
 import android.media.ToneGenerator
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
@@ -16,7 +17,9 @@ import android.util.Log
 import android.util.Size
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewOutlineProvider
+import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -63,6 +66,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var adCard: AdSlideshowView
     private lateinit var screensaver: View
     private lateinit var saverSlideshow: AdSlideshowView
+    private lateinit var cameraContainer: ViewGroup
+    private lateinit var cameraHome: ViewGroup
+    private var cameraHomeIndex = 0
+    private lateinit var saverCameraSlot: ViewGroup
     private var hintPulse: ObjectAnimator? = null
     private val scanLogger by lazy { ScanLogger(this) }
     private val startScreensaver = Runnable { showScreensaver() }
@@ -74,6 +81,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var analyzer: BarcodeAnalyzer
     private var resetJob: Job? = null
     private val beeper = ToneGenerator(AudioManager.STREAM_MUSIC, 100)
+    private var startupPlayer: MediaPlayer? = null
 
     private var lastCode: String? = null
     private var lastCodeAt = 0L
@@ -102,15 +110,19 @@ class MainActivity : AppCompatActivity() {
         adCard = findViewById(R.id.adCard)
         screensaver = findViewById(R.id.screensaver)
         saverSlideshow = findViewById(R.id.saverSlideshow)
+        saverCameraSlot = findViewById(R.id.saverCameraSlot)
         setupPromoHold(findViewById(R.id.promoBanner))
         setupLogoTaps(findViewById(R.id.logo))
+        // playStartupSound() // wyłączone na razie, niepotrzebne
 
         // Zaokrąglone rogi podglądu – SurfaceView nie respektuje przycięcia, stąd TextureView.
         previewView.implementationMode = PreviewView.ImplementationMode.COMPATIBLE
-        findViewById<View>(R.id.cameraContainer).apply {
+        cameraContainer = findViewById<ViewGroup>(R.id.cameraContainer).apply {
             outlineProvider = ViewOutlineProvider.BACKGROUND
             clipToOutline = true
         }
+        cameraHome = cameraContainer.parent as ViewGroup
+        cameraHomeIndex = cameraHome.indexOfChild(cameraContainer)
 
         cameraExecutor = Executors.newSingleThreadExecutor()
         analyzer = BarcodeAnalyzer { code -> runOnUiThread { onBarcode(code) } }
@@ -121,6 +133,14 @@ class MainActivity : AppCompatActivity() {
 
         // Do testów: adb shell am start -n pl.sqn.sprawdzarka/.MainActivity --es ean <kod>
         intent.getStringExtra(EXTRA_EAN)?.let(::onBarcode)
+    }
+
+    /** Krótki dźwięk powitalny – przy każdym uruchomieniu aplikacji. */
+    private fun playStartupSound() {
+        startupPlayer = MediaPlayer.create(this, R.raw.startup_sound)?.apply {
+            setOnCompletionListener { it.release(); startupPlayer = null }
+            start()
+        }
     }
 
     private fun startCamera() {
@@ -238,6 +258,12 @@ class MainActivity : AppCompatActivity() {
         if (saverOn) return
         saverOn = true
         adCard.stop()
+        // Przenosimy żywy podgląd kamery do mini-okienka, żeby było widać gdzie skanować.
+        cameraHome.removeView(cameraContainer)
+        saverCameraSlot.addView(
+            cameraContainer,
+            ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+        )
         screensaver.alpha = 0f
         screensaver.visibility = View.VISIBLE
         screensaver.animate().cancel()
@@ -255,6 +281,13 @@ class MainActivity : AppCompatActivity() {
         if (!saverOn) return
         saverOn = false
         saverSlideshow.stop()
+        // Podgląd kamery wraca na swoje stałe miejsce w środkowej kolumnie.
+        saverCameraSlot.removeView(cameraContainer)
+        cameraHome.addView(
+            cameraContainer,
+            cameraHomeIndex,
+            LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f)
+        )
         hintPulse?.cancel()
         screensaver.animate().cancel()
         screensaver.animate().alpha(0f).setDuration(250)
@@ -347,6 +380,7 @@ class MainActivity : AppCompatActivity() {
         cameraExecutor.shutdown()
         analyzer.close()
         beeper.release()
+        startupPlayer?.release()
     }
 
     companion object {

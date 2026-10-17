@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "pl.sqn.sprawdzarka"
     compileSdk = 35
+    buildToolsVersion = "35.0.1"
 
     defaultConfig {
         applicationId = "pl.sqn.sprawdzarka"
