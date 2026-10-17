@@ -41,4 +41,60 @@ class ScanLogger(context: Context) {
         }
         Log.i("ScanLogger", line)
     }
+
+    /** Kasuje całą zapisaną historię skanów (wszystkie pliki miesięczne). */
+    suspend fun clearAll() = withContext(Dispatchers.IO) {
+        dir.listFiles { f -> f.name.startsWith("skany-") && f.name.endsWith(".csv") }
+            ?.forEach { it.delete() }
+        Unit
+    }
+
+    /** Statystyki ze wszystkich zapisanych miesięcy – do podglądu w aplikacji. */
+    suspend fun readStats(recentLimit: Int = 25): ScanStats = withContext(Dispatchers.IO) {
+        val files = dir.listFiles { f -> f.name.startsWith("skany-") && f.name.endsWith(".csv") }
+            ?.sortedBy { it.name }
+            .orEmpty()
+
+        val records = mutableListOf<ScanRecord>()
+        for (file in files) {
+            file.useLines { lines ->
+                lines.drop(1).forEach { line ->
+                    val parts = line.split(';')
+                    if (parts.size >= 4) {
+                        records += ScanRecord(
+                            time = parts[0],
+                            code = parts[1],
+                            found = parts[2] == "1",
+                            title = parts[3],
+                        )
+                    }
+                }
+            }
+        }
+
+        val topEntry = records
+            .groupingBy { record -> record.title.ifEmpty { record.code } }
+            .eachCount()
+            .maxByOrNull { it.value }
+
+        ScanStats(
+            total = records.size,
+            topLabel = topEntry?.key,
+            topCount = topEntry?.value ?: 0,
+            firstTime = records.firstOrNull()?.time,
+            lastTime = records.lastOrNull()?.time,
+            recent = records.takeLast(recentLimit).asReversed(),
+        )
+    }
 }
+
+data class ScanRecord(val time: String, val code: String, val found: Boolean, val title: String)
+
+data class ScanStats(
+    val total: Int,
+    val topLabel: String?,
+    val topCount: Int,
+    val firstTime: String?,
+    val lastTime: String?,
+    val recent: List<ScanRecord>,
+)

@@ -2,6 +2,7 @@ package pl.sqn.sprawdzarka
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.ActivityManager
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.MediaPlayer
@@ -20,9 +21,11 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewOutlineProvider
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -112,6 +115,7 @@ class MainActivity : AppCompatActivity() {
         saverSlideshow = findViewById(R.id.saverSlideshow)
         saverCameraSlot = findViewById(R.id.saverCameraSlot)
         setupPromoHold(findViewById(R.id.promoBanner))
+        setupHistoryHold(findViewById(R.id.priceBox))
         setupLogoTaps(findViewById(R.id.logo))
         // playStartupSound() // wyłączone na razie, niepotrzebne
 
@@ -182,6 +186,24 @@ class MainActivity : AppCompatActivity() {
         adCard.start()
         if (saverOn) saverSlideshow.start()
         restartIdleTimer()
+        enableKioskLock()
+    }
+
+    /**
+     * Przypina aplikację na ekranie (Android Screen Pinning), żeby nie dało się
+     * z niej wyjść przyciskami home/wstecz/przegląd. Wymaga, żeby na tablecie był
+     * ustawiony PIN/wzór/hasło blokady ekranu – wtedy odpięcie (przytrzymanie
+     * wstecz+przegląd) poprosi o ten kod.
+     */
+    private fun enableKioskLock() {
+        val activityManager = getSystemService(ACTIVITY_SERVICE) as ActivityManager
+        if (activityManager.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE) {
+            try {
+                startLockTask()
+            } catch (e: Exception) {
+                Log.w(TAG, "Nie udało się włączyć trybu kiosku (screen pinning)", e)
+            }
+        }
     }
 
     override fun onPause() {
@@ -220,6 +242,96 @@ class MainActivity : AppCompatActivity() {
             }
             true
         }
+    }
+
+    /** Przytrzymanie boksu z ceną: podgląd historii i statystyk skanowań. */
+    @SuppressLint("ClickableViewAccessibility")
+    private fun setupHistoryHold(box: View) {
+        val trigger = Runnable {
+            box.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+            showScanStats()
+        }
+        box.setOnTouchListener { _, ev ->
+            when (ev.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    box.animate().scaleX(0.98f).scaleY(0.98f).setDuration(HISTORY_HOLD_MS).start()
+                    box.postDelayed(trigger, HISTORY_HOLD_MS)
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    box.removeCallbacks(trigger)
+                    box.animate().scaleX(1f).scaleY(1f).setDuration(150).start()
+                }
+            }
+            true
+        }
+    }
+
+    private fun showScanStats() {
+        lifecycleScope.launch {
+            val stats = scanLogger.readStats()
+            val body = buildString {
+                append("Łącznie zeskanowano: ${stats.total} kod")
+                append(if (stats.total == 1) "\n" else "ów\n")
+                if (stats.topLabel != null) {
+                    append("\nNajczęściej: ${stats.topLabel} (${stats.topCount}x)\n")
+                }
+                if (stats.firstTime != null && stats.lastTime != null) {
+                    append("\nOkres użytkowania: ${formatTimestamp(stats.firstTime)} – ${formatTimestamp(stats.lastTime)}\n")
+                }
+                append("\nOstatnie skany:\n")
+                if (stats.recent.isEmpty()) {
+                    append("(brak)")
+                } else {
+                    stats.recent.forEach { r ->
+                        val label = if (r.found) r.title else "${r.code} (nie znaleziono)"
+                        append("${r.time.substringAfter(' ')}  $label\n")
+                    }
+                }
+            }
+            val textView = TextView(this@MainActivity).apply {
+                text = body
+                setPadding(48, 32, 48, 32)
+                textSize = 15f
+                setTextColor(getColor(R.color.text_primary))
+            }
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle("Statystyki skanowań")
+                .setView(ScrollView(this@MainActivity).apply {
+                    addView(textView)
+                    layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dpToPx(420))
+                })
+                .setPositiveButton("Zamknij", null)
+                .setNegativeButton("Wyczyść statystyki") { _, _ -> confirmClearScanStats() }
+                .show()
+        }
+    }
+
+    private fun confirmClearScanStats() {
+        AlertDialog.Builder(this)
+            .setTitle("Wyczyścić statystyki?")
+            .setMessage("Cała historia skanów zostanie trwale usunięta. Tej operacji nie można cofnąć.")
+            .setPositiveButton("Usuń") { _, _ ->
+                lifecycleScope.launch {
+                    scanLogger.clearAll()
+                    Toast.makeText(this@MainActivity, "Statystyki wyczyszczone", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .setNegativeButton("Anuluj", null)
+            .show()
+    }
+
+    private fun dpToPx(dp: Int): Int = (dp * resources.displayMetrics.density).toInt()
+
+    /** "2026-10-17 16:18:30" -> "17.10.2026 16:18". */
+    private fun formatTimestamp(raw: String): String {
+        val parts = raw.split(' ')
+        if (parts.size != 2) return raw
+        val (datePart, timePart) = parts
+        val dateBits = datePart.split('-')
+        if (dateBits.size != 3) return raw
+        val (year, month, day) = dateBits
+        val hhmm = timePart.substringBeforeLast(':')
+        return "$day.$month.$year $hhmm"
     }
 
     /** Ukryta aktualizacja cen: 5 szybkich stuknięć w logo. */
@@ -391,6 +503,7 @@ class MainActivity : AppCompatActivity() {
         private const val SAME_CODE_PAUSE_MS = 3_000L
         private const val IDLE_TIMEOUT_MS = 5 * 60_000L
         private const val PROMO_HOLD_MS = 3_000L
+        private const val HISTORY_HOLD_MS = 1_200L
         private const val LOGO_TAPS = 5
         private const val LOGO_TAP_GAP_MS = 600L
     }
