@@ -464,6 +464,7 @@ class MainActivity : AppCompatActivity() {
     /** Tryb kiosku: bez paska stanu i nawigacji (pokazują się po przesunięciu od krawędzi). */
     private fun hideSystemBars() {
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        window.attributes = window.attributes.apply { screenBrightness = 1f }
         WindowCompat.setDecorFitsSystemWindows(window, false)
         WindowInsetsControllerCompat(window, window.decorView).apply {
             hide(WindowInsetsCompat.Type.systemBars())
