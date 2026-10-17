@@ -12,8 +12,6 @@ z nich dostajesz gratis!</string>
     <string name="ads_label">Polecamy</string>
     <string name="saver_label">Polecamy</string>
     <string name="saver_hint">Zeskanuj kod kreskowy, aby sprawdzić cenę</string>
-    <string name="doom_title">TRYB DOOM</string>
-    <string name="doom_subtitle">Sprawdzarka cen niestety nie odpala prawdziwego Dooma…\nale teoretycznie mogłaby.</string>
     <string name="prices_updating">Aktualizuję ceny…</string>
     <string name="prices_updated">Zaktualizowano ceny: %d pozycji</string>
     <string name="prices_failed">Nie udało się zaktualizować cen: %s</string>

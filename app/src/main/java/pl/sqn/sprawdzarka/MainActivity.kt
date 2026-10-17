@@ -74,11 +74,6 @@ class MainActivity : AppCompatActivity() {
     private lateinit var cameraHome: ViewGroup
     private var cameraHomeIndex = 0
     private lateinit var saverCameraSlot: ViewGroup
-    private lateinit var priceBox: View
-    private lateinit var promoBanner: View
-    private lateinit var doomEgg: View
-    private var doomArmed = false
-    private val doomTrigger = Runnable { showDoomEgg() }
     private var hintPulse: ObjectAnimator? = null
     private val scanLogger by lazy { ScanLogger(this) }
     private val startScreensaver = Runnable { showScreensaver() }
@@ -120,12 +115,8 @@ class MainActivity : AppCompatActivity() {
         screensaver = findViewById(R.id.screensaver)
         saverSlideshow = findViewById(R.id.saverSlideshow)
         saverCameraSlot = findViewById(R.id.saverCameraSlot)
-        priceBox = findViewById(R.id.priceBox)
-        promoBanner = findViewById(R.id.promoBanner)
-        doomEgg = findViewById(R.id.doomEgg)
-        doomEgg.setOnClickListener { hideDoomEgg() }
-        setupPromoHold(promoBanner)
-        setupHistoryHold(priceBox)
+        setupPromoHold(findViewById(R.id.promoBanner))
+        setupHistoryHold(findViewById(R.id.priceBox))
         setupLogoTaps(findViewById(R.id.logo))
         playStartupSound()
 
@@ -229,45 +220,7 @@ class MainActivity : AppCompatActivity() {
             if (swallowGesture) hideScreensaver()
         }
         restartIdleTimer()
-        checkDoomGesture(ev)
         return if (swallowGesture) true else super.dispatchTouchEvent(ev)
-    }
-
-    /** Ukryty żart: trzymanie jednocześnie dwoma palcami "Sprawdź cenę" i "3 za 2". */
-    private fun checkDoomGesture(ev: MotionEvent) {
-        if (doomEgg.visibility == View.VISIBLE) return
-        val onPrice = (0 until ev.pointerCount).any { isPointerOn(priceBox, ev.getX(it), ev.getY(it)) }
-        val onPromo = (0 until ev.pointerCount).any { isPointerOn(promoBanner, ev.getX(it), ev.getY(it)) }
-        val bothHeld = onPrice && onPromo && ev.pointerCount >= 2
-        if (bothHeld && !doomArmed) {
-            doomArmed = true
-            priceBox.postDelayed(doomTrigger, DOOM_HOLD_MS)
-        } else if (!bothHeld && doomArmed) {
-            doomArmed = false
-            priceBox.removeCallbacks(doomTrigger)
-        }
-    }
-
-    private fun isPointerOn(view: View, x: Float, y: Float): Boolean {
-        val loc = IntArray(2)
-        view.getLocationOnScreen(loc)
-        return x >= loc[0] && x <= loc[0] + view.width && y >= loc[1] && y <= loc[1] + view.height
-    }
-
-    private fun showDoomEgg() {
-        doomArmed = false
-        beeper.startTone(ToneGenerator.TONE_SUP_ERROR, 400)
-        doomEgg.alpha = 0f
-        doomEgg.visibility = View.VISIBLE
-        doomEgg.animate().alpha(1f).setDuration(200).start()
-        doomEgg.postDelayed({ hideDoomEgg() }, DOOM_DISPLAY_MS)
-    }
-
-    private fun hideDoomEgg() {
-        if (doomEgg.visibility != View.VISIBLE) return
-        doomEgg.animate().alpha(0f).setDuration(250)
-            .withEndAction { doomEgg.visibility = View.GONE }
-            .start()
     }
 
     /** Ukryte wejście w tryb reklam: przytrzymanie paska promocji przez kilka sekund. */
@@ -554,8 +507,6 @@ class MainActivity : AppCompatActivity() {
         private const val IDLE_TIMEOUT_MS = 5 * 60_000L
         private const val PROMO_HOLD_MS = 3_000L
         private const val HISTORY_HOLD_MS = 1_200L
-        private const val DOOM_HOLD_MS = 1_200L
-        private const val DOOM_DISPLAY_MS = 3_000L
         private const val LOGO_TAPS = 5
         private const val LOGO_TAP_GAP_MS = 600L
     }

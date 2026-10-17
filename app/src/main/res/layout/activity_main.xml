@@ -289,41 +289,4 @@
                 android:textStyle="bold" />
         </LinearLayout>
     </FrameLayout>
-
-    <!-- Ukryty żart: przytrzymanie jednocześnie "Sprawdź cenę" i "3 za 2" dwoma palcami. -->
-    <FrameLayout
-        android:id="@+id/doomEgg"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:background="#CC1A0000"
-        android:clickable="true"
-        android:elevation="24dp"
-        android:gravity="center"
-        android:visibility="gone">
-
-        <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:orientation="vertical">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:letterSpacing="0.1"
-                android:text="@string/doom_title"
-                android:textColor="#FF3B30"
-                android:textSize="64sp"
-                android:textStyle="bold" />
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="center"
-                android:text="@string/doom_subtitle"
-                android:textColor="@android:color/white"
-                android:textSize="22sp" />
-        </LinearLayout>
-    </FrameLayout>
 </FrameLayout>
