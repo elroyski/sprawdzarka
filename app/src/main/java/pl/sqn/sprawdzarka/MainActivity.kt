@@ -144,6 +144,10 @@ class MainActivity : AppCompatActivity() {
     private fun playStartupSound() {
         startupPlayer = MediaPlayer.create(this, R.raw.startup_sound)?.apply {
             setOnCompletionListener { it.release(); startupPlayer = null }
+            setOnErrorListener { _, what, extra ->
+                Log.w(TAG, "playStartupSound: błąd MediaPlayer what=$what extra=$extra")
+                true
+            }
             start()
         }
     }
